@@ -1,0 +1,50 @@
+
+# Ansible Vault and secrets
+*.vault
+*.vault_pass
+vault_password.txt
+vault_pass.txt
+secrets.yml
+passwords.yml
+
+# Group and host variables (often contain secrets)
+group_vars/*
+host_vars/*
+# Uncomment the next lines if you want to track non-sensitive group_vars
+#!group_vars/all.yml
+#!host_vars/example_host.yml
+
+# Retry files (created after failed runs)
+*.retry
+
+# Fact cache
+.fact_cache/
+ansible_facts_cache/
+cache/
+
+# Logs and temp files
+*.log
+*.tmp
+tmp/
+logs/
+
+#  Inventory backups or temp copies
+inventory/*.bak
+inventory/*.tmp
+inventory/*.orig
+
+# IDE / Editor junk
+.vscode/
+.idea/
+*.swp
+*.swo
+*.save
+.DS_Store
+Thumbs.db
+
+# Python artifacts (if using custom modules)
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/

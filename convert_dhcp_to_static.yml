@@ -1,0 +1,88 @@
+- name: Convert DHCP to Static IP dynamically (safe version)
+  hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    dns: 1.1.1.1  # Change to your preferred DNS (e.g., 8.8.8.8)
+
+  tasks:
+    - name: Print current network details
+      debug:
+        msg: |
+          Current network details:
+          Interface : {{ ansible_default_ipv4.interface }}
+          IP Address: {{ ansible_default_ipv4.address }}/{{ ansible_default_ipv4.netmask }}
+          Gateway   : {{ ansible_default_ipv4.gateway }}
+          DNS       : {{ ansible_dns.nameservers | join(', ') }}
+
+    - name: Find existing Netplan files
+      ansible.builtin.find:
+        paths: /etc/netplan
+        patterns: "*.yaml"
+      register: netplan_files
+
+    - name: Backup existing Netplan files
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "{{ item.path }}.bak"
+        remote_src: yes
+      loop: "{{ netplan_files.files }}"
+      when: netplan_files.matched > 0
+
+    - name: Disable malformed or legacy Netplan configs
+      ansible.builtin.shell: |
+        for f in /etc/netplan/*.yaml; do
+          if grep -q "addresses: -" "$f"; then
+            mv "$f" "$f.disabled"
+          fi
+        done
+      args:
+        executable: /bin/bash
+
+    - name: Fix Netplan file permissions
+      ansible.builtin.file:
+        path: /etc/netplan
+        mode: '0750'
+        recurse: yes
+
+    - name: Generate new Netplan configuration
+      ansible.builtin.copy:
+        dest: /etc/netplan/50-cloud-init.yaml
+        content: |
+          network:
+            version: 2
+            ethernets:
+              {{ ansible_default_ipv4.interface }}:
+                dhcp4: no
+                addresses:
+                  - {{ ansible_default_ipv4.address }}/{{ ansible_default_ipv4.prefix }}
+                gateway4: {{ ansible_default_ipv4.gateway }}
+                nameservers:
+                  addresses:
+                    - {{ dns }}
+                    - 8.8.8.8
+        mode: '0600'
+
+    - name: Validate new Netplan configuration
+      ansible.builtin.command:
+        cmd: netplan generate
+      register: netplan_generate
+      failed_when: netplan_generate.rc != 0
+      changed_when: false
+
+    - name: Apply Netplan configuration safely
+      block:
+        - name: Apply Netplan configuration
+          ansible.builtin.command:
+            cmd: netplan apply
+          register: apply_result
+          failed_when: apply_result.rc != 0
+      rescue:
+        - name: Rollback to previous configuration
+          ansible.builtin.shell: |
+            cp /etc/netplan/*.bak /etc/netplan/
+            netplan apply
+          ignore_errors: yes
+        - name: Report failure and rollback
+          ansible.builtin.debug:
+            msg: "Netplan apply failed. Reverted to backup configuration."
