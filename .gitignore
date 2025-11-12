@@ -3,7 +3,7 @@
 *.vault
 *.vault_pass
 vault_password.txt
-vault_pass.txt
+.vault_pass.txt
 secrets.yml
 passwords.yml
 
