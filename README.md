@@ -163,13 +163,3 @@ Copy back all .bak files to restore previous config.
 Run netplan apply again to roll back.
 Print a message that rollback was done.
 Purpose: Apply configuration safely and automatically revert if something goes wrong.
-
-Summary
-Gathers info about current network.
-Finds all Netplan YAML files.
-Backs them up.
-Disables old/broken YAMLs.
-Fixes file permissions.
-Writes a new static IP config.
-Validates YAML.
-Applies new config safely — rolls back if failed.
